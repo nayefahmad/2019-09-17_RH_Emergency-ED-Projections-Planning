@@ -1,13 +1,28 @@
+
+/*-----------------------------------------
+Richmond ED visits projections
+2019-09-18
+Created by: Peter K. 
+Comments: Nayef 
+
+Nayef: I don't recognize this as an acceptable methodology for long-term projections. 
+
+*/-----------------------------------------
+
+
 use EDMART
 declare @baseyear int,@projectionyear int,@yearcounter int,@mindateid int,@maxdateid int,@facilitylongname varchar(75),@maxgrowthrate float,@bcgrowthrate float
 set @facilitylongname='richmond hospital'
 set @projectionyear=2036
 set @baseyear=2019 --use fiscalyearlong formnat in dim.[date]
 set @yearcounter=@baseyear + 1
-set @mindateid=(select min(dateid) from dim.[date] where fiscalyearlong=@baseyear)
-set @maxdateid=(select max(dateid) from dim.[date] where fiscalyearlong=@baseyear)
-set @maxgrowthrate=0.04
+set @mindateid=(select min(dateid) from [ADTCMart].dim.[date] where fiscalyearlong=@baseyear)
+set @maxdateid=(select max(dateid) from [ADTCMart].dim.[date] where fiscalyearlong=@baseyear)
+set @maxgrowthrate=0.04 -- Dear Lord, why? Where did this magic number come from? "Person X said so" is not an acceptable answer. 
 
+-- We are assuming DIRECT PROPORTIONALITY between population growth and ED visits. 
+-- How do we justify this assumption? Did anyone look at the data and test whether it held in the past? 
+-- Is it really a better model than a linear trend with intercept? 
 set @bcgrowthrate=(select sum(y.[Population])/sum(b.[Population]) as actualgrowthrate
 from DSSI.[dbo].[PEOPLE2018Complete] y
 left outer join DSSI.[dbo].[PEOPLE2018Complete] b on y.agegroup=b.agegroup and y.gender=b.gender and y.lhaid=b.lhaid
@@ -78,13 +93,13 @@ while @yearcounter<= @projectionyear
 begin
 
 update #growth
-set #growth.growthrate=#growth.growthrate * a.adjustedgrowthrate
+set #growth.growthrate=#growth.growthrate * a.adjustedgrowthrate  
 from #growth 
 left outer join 
 (select y.[year] as year2,b.[year] as year1,b.agegroup,b.gender,b.lhaid,y.[Population]/b.[Population] as actualgrowthrate
 ,case when y.[Population]/b.[Population] > 1 and y.[Population]/b.[Population] >= @maxgrowthrate + 1 then @maxgrowthrate + 1 
 when y.[Population]/b.[Population] = 1 then 1
-when y.[Population]/b.[Population] < 1 and y.[Population]/b.[Population] < 1-@maxgrowthrate then 1-@maxgrowthrate 
+when y.[Population]/b.[Population] < 1 and y.[Population]/b.[Population] < 1-@maxgrowthrate then 1-@maxgrowthrate  -- why? 
 --when y.[Population]/b.[Population] < 1 then y.[Population]/b.[Population] 
 else y.[Population]/b.[Population]
 end as adjustedgrowthrate 

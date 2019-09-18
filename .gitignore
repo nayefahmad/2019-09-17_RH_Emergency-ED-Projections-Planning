@@ -1,0 +1,5 @@
+
+*.xlsx
+
+results/
+.Rproj.user
