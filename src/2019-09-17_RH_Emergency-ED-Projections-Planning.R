@@ -6,40 +6,47 @@
 #' output: 
 #'   html_document: 
 #'     keep_md: yes
-#'     code_folding: show
+#'     code_folding: hide
 #'     toc: true
 #'     toc_float: true
 #' ---
 #' 
 
 #+ lib, include = FALSE 
+# libraries: --------------
 library(tidyverse)
 library(denodoExtractor)
 library(DT)
 
 # setup_denodo()
+cnx <- DBI::dbConnect(odbc::odbc(), dsn = "cnx_SPDBSCSTA001")
 
 ed_mart <- dplyr::tbl(cnx, dbplyr::in_schema("EDMart.dbo", 
                                              "[vwEDVisitIdentifiedRegional]"))
 
+people_2018 <- dplyr::tbl(cnx, dbplyr::in_schema("DSSI.dbo", 
+                                                 "[PEOPLE2018Complete]"))
+
 #+ data 
 # pull rhs ed visit data: ----------------
+site <- "RHS"
+
 df1.ed_visits_annual <- 
-  vw_eddata %>% 
-  filter(facility_name == "Richmond Hospital") %>% 
-  select(start_date_calendar_year, 
-         first_triage_acuity_desc, 
-         patient_id) %>% 
-  count(start_date_calendar_year, 
-        first_triage_acuity_desc) %>% 
+  ed_mart %>% 
+  filter(FacilityShortName == site) %>% 
+  select(StartDate, 
+         TriageAcuityDescription, 
+         PatientID) %>% 
   collect() %>% 
   
-  mutate(n = as.integer(n)) %>% 
-  rename(year = start_date_calendar_year, 
-         ctas = first_triage_acuity_desc, 
+  mutate(year = lubridate::year(StartDate)) %>% 
+  count(year, 
+        TriageAcuityDescription) %>% 
+  
+  rename(ctas = TriageAcuityDescription, 
          ed_visits = n)
 
-str(df1.ed_visits_annual)
+# str(df1.ed_visits_annual)
 
 df1.ed_visits_annual %>% 
   datatable(extensions = 'Buttons',
@@ -47,14 +54,45 @@ df1.ed_visits_annual %>%
                            buttons = c('excel', "csv")))
 
 df1.ed_visits_annual %>% 
+  filter(year != "2019") %>% 
   ggplot(aes(x = year, 
-             y = ed_visits)) + 
-  geom_line() + 
+             y = ed_visits, 
+             group = ctas, 
+             col = ctas)) + 
+  geom_line(alpha = 0.5) + 
   geom_point() + 
-  labs(title = "RHS Annual ED Visits by Calendar Year") + 
+  geom_smooth(se = FALSE) + 
+  labs(title = sprintf("%s Annual ED Visits by Calendar Year", 
+                       site)) + 
   theme_light() +
   theme(panel.grid.minor = element_line(colour = "grey95"), 
         panel.grid.major = element_line(colour = "grey95"))
       
+df1.ed_visits_annual %>% 
+  filter(year != "2019") %>% 
+  group_by(year) %>% 
+  summarise(ed_visits = sum(ed_visits)) %>% 
+  
+  ggplot(aes(x = year, 
+             y = ed_visits)) + 
+  geom_line() + 
+  geom_point() + 
+  labs(title = sprintf("%s Annual ED Visits by Calendar Year", 
+                       site)) +  
+  theme_light() +
+  theme(panel.grid.minor = element_line(colour = "grey95"), 
+        panel.grid.major = element_line(colour = "grey95"))
+
 
 #' Looks like it would make sense to look at historical data from 2010 onwards
+
+
+
+#**********************************************
+# pull Richmond population: --------------
+
+
+
+
+
+
