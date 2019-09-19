@@ -13,7 +13,7 @@
 #' 
 
 #+ lib, include = FALSE 
-# libraries: --------------
+# 0) libraries: --------------
 library(tidyverse)
 library(denodoExtractor)
 library(DT)
@@ -40,7 +40,7 @@ df0.age_group_labels <-
 
 #' ## ED visits data 
 #+ data 
-# pull rhs ed visit data: ----------------
+# 1) ED visits data : ----------------
 site <- "RHS"
 
 df1.ed_visits_annual <- 
@@ -58,7 +58,9 @@ df1.ed_visits_annual <-
   
   # remove NA and "Invalid":  
   filter(!is.na(Age),
-         TriageAcuityDescription != "Invalid") %>% 
+         !TriageAcuityDescription %in% c("Invalid", "8 - Disaster Acuity Only" )) %>% 
+  mutate(TriageAcuityDescription = fct_drop(TriageAcuityDescription)) %>% 
+  
 
   # group to year-ctas-age_group level: 
   count(year,
@@ -84,8 +86,8 @@ df1.ed_visits_annual %>%
 
 
 #' 
-#' ### Exploratory plots
-# > ed visit plots: -------------
+#' ### Exploratory plots - RHS ED visits 
+# > Exploratory plots - RHS ED visits : -------------
 
 # Annual ED Visits by Calendar Year, broken out by CTAS 
 df1.ed_visits_annual %>% 
@@ -126,8 +128,14 @@ df1.ed_visits_annual %>%
 
 
 #' Looks like it would make sense to look at historical data from 2010 onwards
-
 #' 
+
+
+
+
+
+
+
 #' ## BC Population data
 #' 
 #' See file *`r here::here("src", "src/2019-09-17_rh_historical-ed-visits-data.sql")`*
@@ -136,7 +144,7 @@ df1.ed_visits_annual %>%
 #' `HSDAName` = "Richmond". That's what I'll do as well.
 
 #**********************************************
-# pull BC population: --------------
+# 2) BC Population data: --------------
 
 df2.bc_population <- 
   people_2018 %>% 
@@ -150,7 +158,7 @@ df2.bc_population <-
            AgeGroup) %>% 
   summarise(pop = sum(Population)) %>% 
   rename(year = Year, 
-         age_group = AgeGroup) %>% 
+         age_group_pop = AgeGroup) %>% 
   as_tibble()
 
 # str(df2.bc_population)
@@ -160,12 +168,14 @@ df2.bc_population %>%
           options = list(dom = 'Bfrtip', 
                          buttons = c('excel', "csv")))
 
+
+
+
+
 #' ### Population growth by age group
 #' 
-#' Too many graphs to show here. Look in *`r here::here("results", "dst")`*
-
 #+ pop-by-age
-# pop by age group:-------------
+# 3) Population growth by age group:-------------
 
 # create nested df: 
 df3.pop_nested <- 
@@ -181,9 +191,76 @@ df3.pop_nested <-
                                  age_group, 
                                  plot_trend))
 
+#' Too many graphs to show here. Look in *`r here::here("results", "dst")`*
+#' 
+#' Here's just one example: 
+#' 
+
+# example: 
+df3.pop_nested$age_group_growth[[sample(1:20, 1)]]
+
 # save output: 
 # pdf(here::here("results", 
 #                "dst", 
 #                "2019-09-18_bc_pop-growth-by-age-group.pdf"))
 # df3.pop_nested$age_group_growth
 # dev.off()
+
+
+
+
+
+
+
+#' ## Join ED data with population data 
+#' 
+# 4) Join ED data with population data -----------------
+
+#' First match the `age_group` labels: 
+#' 
+
+df1.1.ed_visits <- 
+  df1.ed_visits_annual %>% 
+  left_join(df0.age_group_labels) 
+
+#' Then join ED with population data: 
+#' 
+
+df4.ed_and_pop_data <- 
+  df1.1.ed_visits %>% 
+  filter(year >= "2010", 
+         year != "2019") %>% 
+  group_by(year, 
+           age_group_pop, 
+           ctas) %>% 
+  summarise(ed_visits = sum(ed_visits)) %>% 
+  
+  select(year, 
+         age_group_pop, 
+         ctas, 
+         ed_visits) %>% 
+  
+  left_join(df2.bc_population) %>% 
+  
+  arrange(age_group_pop,
+          year, 
+          ctas) %>% 
+  ungroup()
+
+# view result: 
+df4.ed_and_pop_data %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv")))
+
+
+# str(df4.ed_and_pop_data)
+# summary(df4.ed_and_pop_data)
+
+
+
+#' ### Plots - final dataset
+# Plots - final dataset: --------------
+
+
+
