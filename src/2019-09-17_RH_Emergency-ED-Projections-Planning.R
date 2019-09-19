@@ -31,6 +31,13 @@ people_2018 <- dplyr::tbl(cnx, dbplyr::in_schema("DSSI.dbo",
 source(here::here("src", 
                   "plot-pop-vs-year-for-pop-segment_function.R"))
 
+# matching age_group labels: 
+df0.age_group_labels <- 
+  read_csv(here::here("data", 
+                      "2019-09-19_matching-age-group-labels-across-ED-and-population-data.csv"))
+
+
+
 #' ## ED visits data 
 #+ data 
 # pull rhs ed visit data: ----------------
@@ -46,27 +53,46 @@ df1.ed_visits_annual <-
   collect() %>% 
   
   mutate(year = lubridate::year(StartDate), 
-         age_group = cut(Age, c(-1, 0, seq(4, 89, 5), 200)), 
+         age_group = cut(Age, c(-1, 0, seq(4, 89, 5), 200)),  # 5-yr age buckets
          TriageAcuityDescription = as.factor(TriageAcuityDescription)) %>%
+  
+  # remove NA and "Invalid":  
+  filter(!is.na(Age),
+         TriageAcuityDescription != "Invalid") %>% 
+
+  # group to year-ctas-age_group level: 
+  count(year,
+        TriageAcuityDescription, 
+        Age, 
+        age_group) %>%
+  
   rename(ctas = TriageAcuityDescription,
          ed_visits = n)
-
-  # count(year, 
-  #       TriageAcuityDescription) %>% 
-  # 
   
 
-# todo: remove NA ages, "invalid" ctas 
+# result: 
+# str(df1.ed_visits_annual)
+# summary(df1.ed_visits_annual)
 
-str(df1.ed_visits_annual)
-summary(df1.ed_visits_annual)
+#' Note that we remove cases where `Age` = NA (25 rows), and where `age_group` =
+#' "Invalid" (255 rows)
 
 df1.ed_visits_annual %>% 
   datatable(extensions = 'Buttons',
             options = list(dom = 'Bfrtip', 
                            buttons = c('excel', "csv")))
 
+
+#' 
+#' ### Exploratory plots
+# > ed visit plots: -------------
+
+# Annual ED Visits by Calendar Year, broken out by CTAS 
 df1.ed_visits_annual %>% 
+  group_by(year, 
+           ctas) %>% 
+  summarise(ed_visits = sum(ed_visits)) %>% 
+  
   filter(year != "2019") %>% 
   ggplot(aes(x = year, 
              y = ed_visits, 
@@ -80,7 +106,9 @@ df1.ed_visits_annual %>%
   theme_light() +
   theme(panel.grid.minor = element_line(colour = "grey95"), 
         panel.grid.major = element_line(colour = "grey95"))
-      
+
+
+# Annual ED Visits by Calendar Year
 df1.ed_visits_annual %>% 
   filter(year != "2019") %>% 
   group_by(year) %>% 
