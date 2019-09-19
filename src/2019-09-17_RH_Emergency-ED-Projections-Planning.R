@@ -78,6 +78,8 @@ df1.ed_visits_annual <-
 
 #' Note that we remove cases where `Age` = NA (25 rows), and where `age_group` =
 #' "Invalid" (255 rows)
+#' 
+#' We also remove `ctas` levels other than 1 to 5. 
 
 df1.ed_visits_annual %>% 
   datatable(extensions = 'Buttons',
@@ -180,7 +182,7 @@ df2.bc_population %>%
 # create nested df: 
 df3.pop_nested <- 
   df2.bc_population %>% 
-  group_by(age_group) %>% 
+  group_by(age_group_pop) %>% 
   nest()
 
 
@@ -188,7 +190,7 @@ df3.pop_nested <-
 df3.pop_nested <- 
   df3.pop_nested %>% 
   mutate(age_group_growth = map2(data, 
-                                 age_group, 
+                                 age_group_pop, 
                                  plot_trend))
 
 #' Too many graphs to show here. Look in *`r here::here("results", "dst")`*
@@ -259,8 +261,75 @@ df4.ed_and_pop_data %>%
 
 
 
-#' ### Plots - final dataset
-# Plots - final dataset: --------------
+#' ### Plots - joined dataset
+# > Plots - joined dataset: --------------
+
+#' Distribution of num visit by age segment, in 2018
+#' 
+
+# ED visits in 2018, by age group
+df4.ed_and_pop_data %>% 
+  filter(year == "2018") %>% 
+  
+  ggplot(aes(x = as.factor(age_group_pop), 
+             y = ed_visits)) + 
+  geom_boxplot() + 
+  facet_wrap(~ctas) + 
+  labs(title = sprintf("%s ED visits in 2018, by age group", 
+                       site), 
+       subtitle = "todo: \"5-9\" age group is in the wrong place") + 
+  theme_light() +
+  theme(panel.grid.minor = element_line(colour = "grey95"), 
+        panel.grid.major = element_line(colour = "grey95"), 
+        axis.text.x = element_text(angle = 45, 
+                                   hjust = 1))
+
+# dist of population by age: 
+df4.ed_and_pop_data %>% 
+  filter(year == "2018") %>% 
+  select(age_group_pop, 
+         pop) %>% 
+  distinct() %>% 
+  
+  ggplot(aes(x = as.factor(age_group_pop), 
+             y = pop)) + 
+  geom_col(fill = "steelblue4") + 
+  scale_y_continuous(limits = c(0, 500000), 
+                     breaks = seq(0, 500000, 50000), 
+                     labels = sprintf("%i K", seq(0, 500, 50))) + 
+  labs(title = "\"Shape\" of the BC population in 2018, by age group", 
+       subtitle = "todo: \"5-9\" age group is in the wrong place") + 
+  theme_light() +
+  theme(panel.grid.minor = element_line(colour = "grey95"), 
+        panel.grid.major = element_line(colour = "grey95"), 
+        axis.text.x = element_text(angle = 45, 
+                                   hjust = 1))
+
+
+#' High-level view of `ed_visits` vs `pop`, across all segments: 
+#' 
+
+df4.ed_and_pop_data %>% 
+  filter(year == "2018") %>% 
+  ggplot(aes(x = pop, 
+             y = ed_visits, 
+             )) + 
+  geom_jitter()
+  
+#' Not sure that there's much to take away from that.   
+  
+  
 
 
 
+
+# todo: recode year as int - years from 2010
+  
+  
+  
+
+#'
+#' ## Appendix 
+# Appendix -----------
+
+# write outputs: 
