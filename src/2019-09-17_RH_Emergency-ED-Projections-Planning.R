@@ -41,17 +41,25 @@ df1.ed_visits_annual <-
   filter(FacilityShortName == site) %>% 
   select(StartDate, 
          TriageAcuityDescription, 
+         Age, 
          PatientID) %>% 
   collect() %>% 
   
-  mutate(year = lubridate::year(StartDate)) %>% 
-  count(year, 
-        TriageAcuityDescription) %>% 
-  
-  rename(ctas = TriageAcuityDescription, 
+  mutate(year = lubridate::year(StartDate), 
+         age_group = cut(Age, c(-1, 0, seq(4, 89, 5), 200)), 
+         TriageAcuityDescription = as.factor(TriageAcuityDescription)) %>%
+  rename(ctas = TriageAcuityDescription,
          ed_visits = n)
 
-# str(df1.ed_visits_annual)
+  # count(year, 
+  #       TriageAcuityDescription) %>% 
+  # 
+  
+
+# todo: remove NA ages, "invalid" ctas 
+
+str(df1.ed_visits_annual)
+summary(df1.ed_visits_annual)
 
 df1.ed_visits_annual %>% 
   datatable(extensions = 'Buttons',
@@ -100,7 +108,7 @@ df1.ed_visits_annual %>%
 #' `HSDAName` = "Richmond". That's what I'll do as well.
 
 #**********************************************
-# pull Richmond population: --------------
+# pull BC population: --------------
 
 df2.bc_population <- 
   people_2018 %>% 
