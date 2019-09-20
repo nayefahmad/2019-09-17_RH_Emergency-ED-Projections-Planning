@@ -7,9 +7,9 @@
 
 # plotting function: 
 plot_trend2 <- function(df, 
-                        site = "RHS", 
                         subset1 = NULL, 
-                        subset2 = NULL){
+                        subset2 = NULL, 
+                        site = "RHS"){
   # arguments: 
   # > df: df with cols: year, pop, ed_visits 
   # > subset1: optional, used to specify which subset of population we're 
@@ -19,6 +19,9 @@ plot_trend2 <- function(df,
   # > site: used in plot title
   
   # returns ggplot with trend line
+  
+  min_year <- df$year %>% min
+  max_year <- df$year %>% max
   
   df %>% 
     ggplot(aes(x = pop, 
@@ -32,9 +35,11 @@ plot_trend2 <- function(df,
     # scale_x_continuous(limits = c(0, 400000)) +
     labs(title = sprintf("%s: ED visits versus BC population", 
                          site), 
-         subtitle = sprintf("Age group: %s \nCTAS: %s \n2010 to 2036", 
+         subtitle = sprintf("Age group: %s \nCTAS: %s \n%i to %i", 
                             subset1, 
-                            subset2), 
+                            subset2, 
+                            min_year, 
+                            max_year), 
          caption = "\nData sources: PEOPLE 2018, BC Stats; DSDW EDMart, VCH Decision Support") + 
     theme_light() +
     theme(panel.grid.minor = element_line(colour = "grey95"), 
