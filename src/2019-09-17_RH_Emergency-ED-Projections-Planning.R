@@ -30,6 +30,8 @@ people_2018 <- dplyr::tbl(cnx, dbplyr::in_schema("DSSI.dbo",
 # functions: 
 source(here::here("src", 
                   "plot-pop-vs-year-for-pop-segment_function.R"))
+source(here::here("src", 
+                  "plot-pop-vs-year-for-pop-segment_2_function.R"))
 
 # matching age_group labels: 
 df0.age_group_labels <- 
@@ -247,7 +249,13 @@ df4.ed_and_pop_data <-
   arrange(age_group_pop,
           year, 
           ctas) %>% 
-  ungroup()
+  ungroup() %>% 
+  
+  # prep for regression models: 
+  mutate(years_from_2010 = year - 2010) %>% 
+  select(year, 
+         years_from_2010, 
+         everything())
 
 # view result: 
 df4.ed_and_pop_data %>% 
@@ -321,15 +329,81 @@ df4.ed_and_pop_data %>%
   
 
 
+#+ nest-data
+#' ### Nested dataset 
+# > Nested dataset: ----------
+
+df5.nested <- 
+  df4.ed_and_pop_data %>% 
+  group_by(age_group_pop, 
+           ctas) %>% 
+  nest()
+  
+# df5.nested  
+# df5.nested$data[[1]]
+# df5.nested$data[[2]]
 
 
-# todo: recode year as int - years from 2010
+#' ### Plots - ed visits-vs-pop by age_group and ctas
+#'
+#' Let's examine whether it is reasonable to fit a linear trend to the
+#' ed_visits-vs-pop historical data. 
+#' 
+
+# > Plots - ed visits-vs-pop by age_group and ctas ------------
+
+df5.nested <- 
+  df5.nested %>% 
+  mutate(ed_vs_pop = pmap(list(df = data, 
+                               subset1 = age_group_pop, 
+                               subset2 = ctas, 
+                               site = "RHS"), 
+                          plot_trend2))
+# df5.nested
+# df5.nested$ed_vs_pop[64]
   
-  
-  
+#' Too many graphs to show here. Look in *`r here::here("results", "dst")`*
+#' 
+#' Here's just one example: 
+#' 
+
+# example: 
+df5.nested$ed_vs_pop[[sample(1:100, 1)]]
+
+
+# save output: 
+# pdf(here::here("results",
+#                "dst",
+#                "2019-09-19_rhs_ed-visits-vs-pop-segmented-by-age-and-ctas.pdf"))
+# df5.nested$ed_vs_pop
+# dev.off()
+
+
+#' ## Model fitting 
+#' 
+#' We'll fit two models for $edvisits ~ pop$
+#' 1. OLS 
+#' 2. Robust regression with `MASS::rlm()`. In rlm, the Huber fn uses squared 
+#' residuals when they are "small", and the simple difference between observed 
+#' and fitted values when the residuals are above a threshold.^[See **Applied Predictive Modeling** by Max Kuhn, p109]
+
+# 5) Model fitting: ----------
+
+# OLS regression 
+segment_model <- function(df){
+  lm(ed_visits ~ pop, 
+     data = df)
+}
+
+# Robust regression
+# segment_model_rlm <- 
+
+
 
 #'
 #' ## Appendix 
 # Appendix -----------
 
-# write outputs: 
+# todo:write outputs: 
+
+#' 

@@ -27,11 +27,15 @@ plot_trend2 <- function(df,
     ggplot(aes(x = pop, 
                y = ed_visits)) + 
     geom_point() + 
+    geom_text(aes(label = year, 
+                  size = years_from_2010),
+              alpha = 0.2, 
+              vjust = "top") + 
     geom_smooth(col = "grey90", 
                 se = FALSE, 
                 method = "lm") + 
-    scale_y_continuous(limits = c(0, 2000), 
-                       breaks = seq(0, 2000, 500)) +
+    scale_y_continuous(limits = c(0, 2500), 
+                       breaks = seq(0, 2500, 500)) +
     # scale_x_continuous(limits = c(0, 400000)) +
     labs(title = sprintf("%s: ED visits versus BC population", 
                          site), 
@@ -53,4 +57,4 @@ plot_trend2 <- function(df,
 # First run the following script until definition of `df5.nested`: 
 # "src/2019-09-17_RH_Emergency-ED-Projections-Planning.R"
 
-# df5.nested$data[[58]] %>% plot_trend2(subset1 = "<1", subset2 = "1 - Resuscitation")
+df5.nested$data[[58]] %>% plot_trend2(subset1 = "<1", subset2 = "1 - Resuscitation")
