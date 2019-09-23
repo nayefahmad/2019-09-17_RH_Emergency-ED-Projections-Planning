@@ -7,6 +7,7 @@
 #'   html_document: 
 #'     keep_md: yes
 #'     code_folding: hide
+#'     number_sections: true
 #'     toc: true
 #'     toc_float: 
 #'       collapsed: false
@@ -48,7 +49,7 @@ knitr::opts_chunk$set(warning=FALSE, message=FALSE)
 
 
 
-#' ## ED visits data 
+#' # ED visits data 
 #+ data 
 # 1) ED visits data : ----------------
 site <- "RHS"
@@ -98,7 +99,7 @@ df1.ed_visits_annual %>%
 
 
 #' 
-#' ### Exploratory plots - RHS ED visits 
+#' ## Exploratory plots - RHS ED visits 
 # > Exploratory plots - RHS ED visits : -------------
 
 # Annual ED Visits by Calendar Year, broken out by CTAS 
@@ -148,7 +149,7 @@ df1.ed_visits_annual %>%
 
 
 
-#' ## BC Population data
+#' # BC Population data
 #' 
 #' See file *`r here::here("src", "src/2019-09-17_rh_historical-ed-visits-data.sql")`*
 #'  
@@ -184,7 +185,7 @@ df2.bc_population %>%
 
 
 
-#' ### Population growth by age group
+#' ## Population growth by age group
 #' 
 #+ pop-by-age
 # 3) Population growth by age group:-------------
@@ -231,7 +232,7 @@ df3.pop_nested <-
 
 
 
-#' ## Join ED data with population data 
+#' # Join ED data with population data 
 #' 
 # 4) Join ED data with population data -----------------
 
@@ -284,7 +285,7 @@ df4.ed_and_pop_data %>%
 
 
 
-#' ### Plots - joined dataset
+#' ## Plots - joined dataset
 # > Plots - joined dataset: --------------
 
 #' Distribution of num visit by age segment, in 2018
@@ -345,7 +346,7 @@ df4.ed_and_pop_data %>%
 
 
 #+ nest-data
-#' ### Nested dataset 
+#' ## Nested dataset 
 # > Nested dataset: ----------
 
 df5.nested <- 
@@ -359,7 +360,7 @@ df5.nested <-
 # df5.nested$data[[2]]
 
 
-#' ### Plots - ED visits-vs-pop
+#' ## Plots - ED visits-vs-pop
 #'
 #' Let's examine whether it is reasonable to fit a linear trend to the
 #' ed_visits-vs-pop historical data. 
@@ -394,12 +395,12 @@ df5.nested$ed_vs_pop[[sample(1:100, 1)]]
 # dev.off()
 
 
-#' ## Model fitting 
+#' # Model fitting 
 #' 
 #' We'll fit two models for `ed_visits` vs `pop`:
 #' 
 #' 
-#' 1. OLS
+#' 1. OLS - that is, standard linear regression.
 #'  
 #' 2. Robust regression with `MASS::rlm()`. In rlm, the Huber fn uses squared 
 #' residuals when they are "small", and the simple difference between observed 
@@ -434,7 +435,7 @@ segment <- sample(1:100, 1)  # random selection
 # df6.models$model_rlm[[segment]] %>% summary
 
 #' 
-#' ### Extracting estimates
+#' ## Extracting estimates
 # > extracting estimates: -----------
 df6.models <- 
   df6.models %>% 
@@ -463,7 +464,7 @@ df6.models <-
 # df6.models %>% unnest(tidy)
 # df6.models %>% unnest(tidy_rlm)
 
-#' #### OLS estimates 
+#' ### OLS estimates 
 df6.models %>% 
   unnest(tidy) %>% 
   datatable(extensions = 'Buttons',
@@ -471,7 +472,7 @@ df6.models %>%
                            buttons = c('excel', "csv"))) %>% 
   formatRound(3:99)
 
-#' #### Robust regression estimates 
+#' ### Robust regression estimates 
 df6.models %>% 
   unnest(tidy_rlm) %>% 
   datatable(extensions = 'Buttons',
@@ -485,7 +486,7 @@ df6.models %>%
 #' better
 
 #'
-#' ### Comparing models
+#' ## Comparing models
 # > comparing models: ----------
 
 # OLS regression
@@ -553,7 +554,7 @@ df6.models %>%
   theme(panel.grid.minor = element_line(colour = "grey95"), 
         panel.grid.major = element_line(colour = "grey95"))
 
-#' ### Notes on the models
+#' ## Notes on the models
 #'
 #' There's a lot of useful info in the graphs above.
 #'
@@ -589,7 +590,7 @@ df6.models %>%
 
 
 #+ projections
-#' ## Projections 
+#' # Projections 
 # 7) Projections: --------- 
 
 #' For each age_group-ctas segment, we use the specific regression model for
@@ -655,7 +656,7 @@ df9.predictions_unnested <-
 
 # df9.predictions_unnested 
 
-#' ### Join historical and projected data
+#' ## Join historical and projected data
 # > join historical and projected data: ------
 df10.historical_and_projection <- 
   df8.add_predictions %>% 
@@ -743,9 +744,30 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 
 
 
-#' ## Adjustments to the projections
+#' # Adjustments to the projections
 # 9) Adjustments to the projections: -----------
 
+#' All estimates are based on trends in the historical data. There are 4 
+#' population segments for which there is almost no relevant 	
+#' historical data, because of a major shift in behaviour since 2016. These 
+#' segments are: 	
+#'  
+#' * Age 40-44, CTAS 2 and CTAS 3	
+#' * Age 45-49, CTAS 2 and CTAS 3	
+#' 
+
+#' These segments had decreasing population and increasing ED visits from 2010 
+#' to 2015. 	
+#' 
+#' Then, from 2016, there is slight evidence that both population and ED visits 
+#' are increasing, but the trend is not clear yet.
+#' 
+#' We will refit models for these segments with data only from 2016. 
+#' 
+
+
+#' \  
+#' 
 #' The plan is to go back to `df4.ed_and_pop_data`, filter specifically for the
 #' problematic segments, then filter to only include last 3 years of data.
 #'
@@ -877,7 +899,7 @@ df10.historical_and_projection %>%
 
 
 
-#' ### Plotting final after adjustments: 
+#' ## Plotting final after adjustments: 
 # > Plotting final after adjustments: -------
 
 # pivot data into right format: 
@@ -938,7 +960,7 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 
 
 #'
-#' ## Appendix 
+#' # Appendix 
 # Appendix -----------
 
 # todo:write outputs: 
