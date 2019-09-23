@@ -359,13 +359,13 @@ df5.nested <-
 # df5.nested$data[[2]]
 
 
-#' ### Plots - ed visits-vs-pop by age_group and ctas
+#' ### Plots - ED visits-vs-pop
 #'
 #' Let's examine whether it is reasonable to fit a linear trend to the
 #' ed_visits-vs-pop historical data. 
 #' 
 
-# > Plots - ed visits-vs-pop by age_group and ctas ------------
+# > Plots - ED visits-vs-pop ------------
 
 df5.nested <- 
   df5.nested %>% 
@@ -746,15 +746,194 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 #' ## Adjustments to the projections
 # 9) Adjustments to the projections: -----------
 
+#' The plan is to go back to `df4.ed_and_pop_data`, filter specifically for the
+#' problematic segments, then filter to only include last 3 years of data.
+#'
+#' Then follow the same process up to `df10.historical_and_projection`
+#'
+#' In the end, delete those segments from `df10.historical_and_projection` and
+#' replace them with the new versions.
+#' 
+#' Let's name them all starting with `df12.xx_`
+#' 
+#' 
+
+df12.1_adjustments <-
+  df4.ed_and_pop_data %>%
+  filter(age_group_pop %in% c("40-44", "45-49"), 
+         ctas %in% c("2 - Emergency", "3 - Urgent"), 
+         year >= 2016)
+
+  
+df12.2_nested <- 
+  df12.1_adjustments %>% 
+  group_by(age_group_pop, 
+           ctas) %>% 
+  nest()
+
+df12.3_models <- 
+  df12.2_nested %>% 
+  mutate(model = map(data, segment_model), 
+         model_rlm = map(data, segment_model_rlm)) %>% 
+  
+  mutate(tidy = map(model, broom::tidy), 
+         glance = map(model, broom::glance), 
+         
+         # let's specifically extract r squared: 
+         rsq = glance %>% map_dbl("r.squared"),  
+         # map( ) can be used to extract all objects with a certain name, here "r.squared"
+         
+         # same results for rlm: 
+         tidy_rlm = map(model_rlm, broom::tidy), 
+         glance_rlm = map(model_rlm, broom::glance), 
+         
+         # get AIC specifically: 
+         aic = glance_rlm %>% map_dbl("AIC"))
+
+# view: 
+df12.3_models %>% 
+  unnest(tidy_rlm) %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(3:9)
+
+# add pop data: 
+df12.4_add_pop <- 
+  df12.3_models %>% 
+  left_join(df3.pop_nested %>% 
+              select(age_group_pop, 
+                     pop_projection))
+
+# add projections: 
+df12.5_add_projections <- 
+  df12.4_add_pop %>% 
+  mutate(ed_visits_projected_lm = map2(model,
+                                       pop_projection,
+                                       lm_predict), 
+         
+         ed_visits_projected_rlm = map2(model_rlm,
+                                        pop_projection,
+                                        lm_predict)) %>% 
+  unnest(ed_visits_projected_lm, 
+         ed_visits_projected_rlm) %>% 
+  select(age_group_pop, 
+         ctas, 
+         fit:upr, 
+         fit1:upr1) %>% 
+  rename(fit_lm = fit, 
+         lwr_lm = lwr, 
+         upr_lm = upr, 
+         
+         fit_rlm = fit1, 
+         lwr_rlm = lwr1, 
+         upr_rlm = upr1) %>% 
+  mutate(year = rep(2019:2036, times = 4))
+
+
+# join historical and projected data: 
+df12.6_historical_and_projection <- 
+  df12.4_add_pop %>% 
+  unnest(data) %>% 
+  select(age_group_pop, 
+         ctas, 
+         year, 
+         pop, 
+         ed_visits) %>% 
+  
+  full_join(df12.5_add_projections) %>% 
+  
+  arrange(age_group_pop, 
+          ctas, 
+          year)
+
+#' Now we replace the rows corresponding to these segments in the previous
+#' results. 
+#' 
+
+# remove segments: 
+df10.historical_and_projection <- 
+  df10.historical_and_projection %>% 
+  filter(!(age_group_pop %in% c("40-44", "45-49") & 
+         ctas %in% c("2 - Emergency", "3 - Urgent") &
+         year >= 2016)) # %>% View("df10 filter")
+
+
+df10.historical_and_projection <- 
+  df10.historical_and_projection %>% 
+  bind_rows(df12.6_historical_and_projection) %>% 
+  arrange(age_group_pop, 
+          ctas, 
+          year)
+
+#' Here's the final dataset after adjustments: 
+
+# View result: 
+df10.historical_and_projection %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(6:12)
+
+
+
+#' ### Plotting final after adjustments: 
+# > Plotting final after adjustments: -------
+
+# pivot data into right format: 
+df11.pivoted <- 
+  df10.historical_and_projection %>% 
+  select(age_group_pop, 
+         ctas, 
+         year, 
+         ed_visits, 
+         fit_lm, 
+         upr_lm) %>% 
+  gather(key = "metric", 
+         value = "value", 
+         -c(age_group_pop, 
+            ctas, 
+            year)) %>% 
+  arrange(age_group_pop, 
+          ctas, 
+          year) %>% 
+  na.omit() %>% 
+  mutate(value = ifelse(value < 0, 
+                        0, 
+                        value)) %>% 
+  
+  # group by and nest: 
+  group_by(age_group_pop, 
+           ctas) %>% 
+  nest()
+
+# df11.pivoted
+
+# add in graphs by mapping over list-col
+
+df11.pivoted <- 
+  df11.pivoted %>% 
+  mutate(plot_projection = pmap(list(df = data, 
+                                     subset1 = age_group_pop, 
+                                     subset2 = ctas, 
+                                     site = "RHS"), 
+                                plot_ed_projection))
+
+
+
+
+
+
 #' **todo:**
+#' 
 #' 1. deal with the nonsense happening in age groups:
 #'
-#'     * 40-44: especially CTAS 3: Look very carefully at the ED-visits vs pop
+#'     * 40-44: CTAS 2 & 3: Look very carefully at the ED-visits vs pop
 #' historical graph. You'll see that there is a structural change after 2016:
 #' the last 3 points, from 2016 to 2018, define a regression line with positive
 #' slope, not negative
 #'
-#'     * 45-49: especially CTAS 3
+#'     * 45-49: CTAS 2 & 3
 #'
 #' 2. Filter out the above segments from the results dataframes. Then redo the
 #' regressions manually for those ones.
@@ -766,9 +945,9 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 
 # todo:write outputs: 
 # write_csv(df10.historical_and_projection,
-#           here::here("results", 
-#                      "dst", 
+#           here::here("results",
+#                      "dst",
 #                      "2019-09-22_rhs_ed-visits-projections-by-age-and-ctas.csv"))
-             
+
 
  
