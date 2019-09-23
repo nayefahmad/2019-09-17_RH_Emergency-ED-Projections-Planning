@@ -39,7 +39,6 @@ df0.age_group_labels <-
                       "2019-09-19_matching-age-group-labels-across-ED-and-population-data.csv"))
 
 
-
 #' ## ED visits data 
 #+ data 
 # 1) ED visits data : ----------------
@@ -381,11 +380,15 @@ df5.nested$ed_vs_pop[[sample(1:100, 1)]]
 
 #' ## Model fitting 
 #' 
-#' We'll fit two models for $edvisits ~ pop$
-#' 1. OLS 
+#' We'll fit two models for `ed_visits` vs `pop`:
+#' 
+#' 
+#' 1. OLS
+#'  
 #' 2. Robust regression with `MASS::rlm()`. In rlm, the Huber fn uses squared 
 #' residuals when they are "small", and the simple difference between observed 
 #' and fitted values when the residuals are above a threshold.^[See **Applied Predictive Modeling** by Max Kuhn, p109]
+
 
 # 5) Model fitting: ----------
 
@@ -396,8 +399,160 @@ segment_model <- function(df){
 }
 
 # Robust regression
-# segment_model_rlm <- 
+segment_model_rlm <- function(df){
+  MASS::rlm(ed_visits ~ pop, 
+            data = df)
+}
 
+
+# fit the models: 
+df6.models <- 
+  df5.nested %>% 
+  mutate(model = map(data, segment_model), 
+         model_rlm = map(data, segment_model_rlm))
+
+# df6.models
+segment <- sample(1:100, 1)  # random selection
+
+# df6.models$model[[segment]] %>% summary
+# df6.models$model_rlm[[segment]] %>% summary
+
+#' 
+#' ### Extracting estimates
+# > extracting estimates: -----------
+df6.models <- 
+  df6.models %>% 
+  mutate(tidy = map(model, broom::tidy), 
+         glance = map(model, broom::glance), 
+         
+         # let's specifically extract r squared: 
+         rsq = glance %>% map_dbl("r.squared"),  
+         # map( ) can be used to extract all objects with a certain name, here "r.squared"
+         
+         # same results for rlm: 
+         tidy_rlm = map(model_rlm, broom::tidy), 
+         glance_rlm = map(model_rlm, broom::glance), 
+         
+         # get AIC specifically: 
+         aic = glance_rlm %>% map_dbl("AIC")
+         
+         
+  )
+
+
+# df6.models
+# df6.models %>% View()
+# df6.models %>% unnest(glance)
+# df6.models %>% unnest(glance_rlm)
+# df6.models %>% unnest(tidy)
+# df6.models %>% unnest(tidy_rlm)
+
+#' #### OLS estimates 
+df6.models %>% 
+  unnest(tidy) %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(3:99)
+
+#' #### Robust regression estimates 
+df6.models %>% 
+  unnest(tidy_rlm) %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(3:8)
+
+#' Results from OLS and robust regression seem very close. That's a good thing.
+#' 
+#' Todo: We'll compare the two models later for 2018 data to see which seems to do
+#' better
+
+#'
+#' ### Comparing models
+# > comparing models: ----------
+
+# OLS regression
+df6.models %>% 
+  unnest(tidy) %>% 
+  select(term, 
+         estimate, 
+         age_group_pop, 
+         ctas, 
+         rsq) %>% 
+  spread(term, estimate) %>% 
+  
+  ggplot(aes(x = pop, 
+             y = `(Intercept)`, 
+             col = ctas, 
+             size = rsq)) + 
+  geom_point(alpha = .5) + 
+  geom_point(shape = 21, col = "grey") + 
+  geom_vline(xintercept = 0, col = "grey") + 
+  geom_hline(yintercept = 0, col = "grey") + 
+  
+  scale_color_brewer(type = "qual", 
+                     palette = 3, 
+                     direction = -1) +
+  
+  labs(x = "Coefficient of pop", 
+       y = "Intercept", 
+       title = "Results from OLS regression of ed_visits on pop for each [age_group-ctas] segment") + 
+  
+  theme_light() +
+  theme(panel.grid.minor = element_line(colour = "grey95"), 
+        panel.grid.major = element_line(colour = "grey95"))
+      
+
+# robust regression  
+df6.models %>% 
+  unnest(tidy_rlm) %>% 
+  select(term, 
+         estimate, 
+         age_group_pop, 
+         ctas, 
+         rsq) %>% 
+  spread(term, estimate) %>% 
+  
+  ggplot(aes(x = pop, 
+             y = `(Intercept)`, 
+             col = ctas, 
+             size = rsq)) + 
+  geom_point(alpha = .5) + 
+  geom_point(shape = 21, col = "grey") + 
+  geom_vline(xintercept = 0, col = "grey") + 
+  geom_hline(yintercept = 0, col = "grey") + 
+  
+  scale_color_brewer(type = "qual", 
+                     palette = 3, 
+                     direction = -1) +
+  
+  labs(x = "Coefficient of pop", 
+       y = "Intercept", 
+       title = "Results from robust regression of ed_visits on pop for each /n[age_group-ctas] segment") + 
+  
+  theme_light() +
+  theme(panel.grid.minor = element_line(colour = "grey95"), 
+        panel.grid.major = element_line(colour = "grey95"))
+
+#' ### Notes on the models
+#'
+#' There's a lot of useful info in the graphs above.
+#'
+#' 1. Firstly note the range across the y-axis: the intercepts are often very
+#' different from 0, and these are fairly well-fitting models (using Rsquared as
+#' a metric). This emphasizes again: **please, for crying out loud, do not just
+#' assume direct proportionality between ED visits and population**
+#'
+#' 2. Results from OLS and robust regression are almost identical: this helps
+#' counter concerns that may be raised about "outlier" years biasing the results
+#'
+#' 3. CTAS 3 is most correlated with population size (both positively and
+#' negatively), followed by CTAS 4.
+#'
+#' 4. Nearly every segment with a positive intercept has a negative slope. These
+#' are likely cases where population size is decreasing, but ED visits are
+#' rising.
 
 
 #'
