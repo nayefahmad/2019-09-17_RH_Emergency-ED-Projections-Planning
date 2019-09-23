@@ -8,7 +8,8 @@
 #'     keep_md: yes
 #'     code_folding: hide
 #'     toc: true
-#'     toc_float: true
+#'     toc_float: 
+#'       collapsed: false
 #' ---
 #' 
 
@@ -39,6 +40,12 @@ source(here::here("src",
 df0.age_group_labels <- 
   read_csv(here::here("data", 
                       "2019-09-19_matching-age-group-labels-across-ED-and-population-data.csv"))
+
+# knitr options: 
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+
+
+
 
 
 #' ## ED visits data 
@@ -585,6 +592,13 @@ df6.models %>%
 #' ## Projections 
 # 7) Projections: --------- 
 
+#' For each age_group-ctas segment, we use the specific regression model for
+#' that segment, and predict future ED visits using the known projected
+#' population values.
+#'
+#' This is implemented mainly by calling `predict(model, newdata = df)`, where
+#' df is a dataframe with the projected population numbers from BC Stats.
+
 # fist we have to pull in the projected pop for each pop segmented
 df7.add_pop_projection <- 
   df6.models %>% 
@@ -594,7 +608,9 @@ df7.add_pop_projection <-
 
 # df7.add_pop_projection$pop_projection[[1]]
 
+#' The following is the function that will be mapped across the segments: 
 
+#+ proj-fn
 # functions for projections: 
 lm_predict <- function(model, new_data){
   df <- new_data
@@ -605,7 +621,7 @@ lm_predict <- function(model, new_data){
   
 }
 
-
+#+ add-predictions
 df8.add_predictions <-
   df7.add_pop_projection %>%
   mutate(ed_visits_projected_lm = map2(model,
@@ -639,7 +655,7 @@ df9.predictions_unnested <-
 
 # df9.predictions_unnested 
 
-
+#' ### Join historical and projected data
 # > join historical and projected data: ------
 df10.historical_and_projection <- 
   df8.add_predictions %>% 
@@ -660,7 +676,8 @@ df10.historical_and_projection <-
 df10.historical_and_projection %>% 
   datatable(extensions = 'Buttons',
             options = list(dom = 'Bfrtip', 
-                           buttons = c('excel', "csv")))
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(6:11)
 
 
 
@@ -686,6 +703,9 @@ df11.pivoted <-
           ctas, 
           year) %>% 
   na.omit() %>% 
+  mutate(value = ifelse(value < 0, 
+                        0, 
+                        value)) %>% 
   
   # group by and nest: 
   group_by(age_group_pop, 
@@ -712,21 +732,32 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 
 
 # save output: 
-pdf(here::here("results",
-               "dst",
-               "2019-09-23_rhs_projected-ed-visits-by-age-and-ctas-segment.pdf"))
-df11.pivoted$plot_projection
-dev.off()
+# pdf(here::here("results",
+#                "dst",
+#                "2019-09-23_rhs_projected-ed-visits-by-age-and-ctas-segment.pdf"))
+# df11.pivoted$plot_projection
+# dev.off()
 
 
-#' ## Todo
-#' 
-#' 1. remove fitted values < 0 
-#' 
-#' 2. deal with the nonsense happening in age groups: 
-#'     
-#'     * 40-44
-#'     * 45-49 
+
+
+
+
+#' ## Adjustments to the projections
+# 9) Adjustments to the projections: -----------
+
+#' **todo:**
+#' 1. deal with the nonsense happening in age groups:
+#'
+#'     * 40-44: especially CTAS 3: Look very carefully at the ED-visits vs pop
+#' historical graph. You'll see that there is a structural change after 2016:
+#' the last 3 points, from 2016 to 2018, define a regression line with positive
+#' slope, not negative
+#'
+#'     * 45-49: especially CTAS 3
+#'
+#' 2. Filter out the above segments from the results dataframes. Then redo the
+#' regressions manually for those ones.
 
 
 #'
