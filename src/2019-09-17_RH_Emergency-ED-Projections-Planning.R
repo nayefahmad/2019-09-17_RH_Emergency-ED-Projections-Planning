@@ -32,6 +32,8 @@ source(here::here("src",
                   "plot-pop-vs-year-for-pop-segment_function.R"))
 source(here::here("src", 
                   "plot-pop-vs-year-for-pop-segment_2_function.R"))
+source(here::here("src", 
+                  "plot-predictions_function.R"))
 
 # matching age_group labels: 
 df0.age_group_labels <- 
@@ -661,10 +663,81 @@ df10.historical_and_projection %>%
                            buttons = c('excel', "csv")))
 
 
+
+#+ plot-results 
+#' ## Plotting final results 
+# # 8) Plotting final results: ------
+
+# pivot data into right format: 
+df11.pivoted <- 
+  df10.historical_and_projection %>% 
+  select(age_group_pop, 
+         ctas, 
+         year, 
+         ed_visits, 
+         fit_lm, 
+         upr_lm) %>% 
+  gather(key = "metric", 
+         value = "value", 
+         -c(age_group_pop, 
+            ctas, 
+            year)) %>% 
+  arrange(age_group_pop, 
+          ctas, 
+          year) %>% 
+  na.omit() %>% 
+  
+  # group by and nest: 
+  group_by(age_group_pop, 
+           ctas) %>% 
+  nest()
+
+# df11.pivoted
+
+# add in graphs by mapping over list-col
+
+df11.pivoted <- 
+  df11.pivoted %>% 
+  mutate(plot_projection = pmap(list(df = data, 
+                                     subset1 = age_group_pop, 
+                                     subset2 = ctas, 
+                                     site = "RHS"), 
+                               plot_ed_projection))
+  
+#' There are too many graphs to show here. See *`r here::here("results", "dst")`*
+#' 
+#' Here's just one example: 
+
+df11.pivoted$plot_projection[[sample(1:100, 1)]]
+
+
+# save output: 
+pdf(here::here("results",
+               "dst",
+               "2019-09-23_rhs_projected-ed-visits-by-age-and-ctas-segment.pdf"))
+df11.pivoted$plot_projection
+dev.off()
+
+
+#' ## Todo
+#' 
+#' 1. remove fitted values < 0 
+#' 
+#' 2. deal with the nonsense happening in age groups: 
+#'     
+#'     * 40-44
+#'     * 45-49 
+
+
 #'
 #' ## Appendix 
 # Appendix -----------
 
 # todo:write outputs: 
+# write_csv(df10.historical_and_projection,
+#           here::here("results", 
+#                      "dst", 
+#                      "2019-09-22_rhs_ed-visits-projections-by-age-and-ctas.csv"))
+             
 
-#' 
+ 
