@@ -58,4 +58,4 @@ plot_ed_projection <- function(df,
 # First run the following script until definition of `df11.pivoted`: 
 # "src/2019-09-17_RH_Emergency-ED-Projections-Planning.R"
 
-df11.pivoted$data[[58]] %>% plot_ed_projection(subset1 = "<1", subset2 = "1 - Resuscitation")
+# df11.pivoted$data[[58]] %>% plot_ed_projection(subset1 = "<1", subset2 = "1 - Resuscitation")
