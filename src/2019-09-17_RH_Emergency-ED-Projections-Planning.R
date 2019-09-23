@@ -919,24 +919,22 @@ df11.pivoted <-
                                      site = "RHS"), 
                                 plot_ed_projection))
 
-
-
-
-
-
-#' **todo:**
+#' There are too many graphs to show here. See *`r here::here("results", "dst")`*
 #' 
-#' 1. deal with the nonsense happening in age groups:
-#'
-#'     * 40-44: CTAS 2 & 3: Look very carefully at the ED-visits vs pop
-#' historical graph. You'll see that there is a structural change after 2016:
-#' the last 3 points, from 2016 to 2018, define a regression line with positive
-#' slope, not negative
-#'
-#'     * 45-49: CTAS 2 & 3
-#'
-#' 2. Filter out the above segments from the results dataframes. Then redo the
-#' regressions manually for those ones.
+#' Here's just one example: 
+
+df11.pivoted$plot_projection[[sample(1:100, 1)]]
+
+
+# save output: 
+# pdf(here::here("results",
+#                "dst",
+#                "2019-09-23_rhs_projected-ed-visits-by-age-and-ctas-segment.pdf"))
+# df11.pivoted$plot_projection
+# dev.off()
+
+
+
 
 
 #'
