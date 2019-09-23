@@ -487,9 +487,10 @@ df6.models %>%
              col = ctas, 
              size = rsq)) + 
   geom_point(alpha = .5) + 
-  geom_point(shape = 21, col = "grey") + 
   geom_vline(xintercept = 0, col = "grey") + 
   geom_hline(yintercept = 0, col = "grey") + 
+  
+  facet_wrap(~ctas) +
   
   scale_color_brewer(type = "qual", 
                      palette = 3, 
@@ -519,9 +520,10 @@ df6.models %>%
              col = ctas, 
              size = rsq)) + 
   geom_point(alpha = .5) + 
-  geom_point(shape = 21, col = "grey") + 
   geom_vline(xintercept = 0, col = "grey") + 
   geom_hline(yintercept = 0, col = "grey") + 
+  
+  facet_wrap(~ctas) +
   
   scale_color_brewer(type = "qual", 
                      palette = 3, 
@@ -529,7 +531,7 @@ df6.models %>%
   
   labs(x = "Coefficient of pop", 
        y = "Intercept", 
-       title = "Results from robust regression of ed_visits on pop for each /n[age_group-ctas] segment") + 
+       title = "Results from robust regression of ed_visits on pop for each \n[age_group-ctas] segment") + 
   
   theme_light() +
   theme(panel.grid.minor = element_line(colour = "grey95"), 
@@ -542,7 +544,9 @@ df6.models %>%
 #' 1. Firstly note the range across the y-axis: the intercepts are often very
 #' different from 0, and these are fairly well-fitting models (using Rsquared as
 #' a metric). This emphasizes again: **please, for crying out loud, do not just
-#' assume direct proportionality between ED visits and population**
+#' assume direct proportionality between ED visits and population**. That only
+#' holds when the relationship is a straight line through the origin (zero
+#' intercept)
 #'
 #' 2. Results from OLS and robust regression are almost identical: this helps
 #' counter concerns that may be raised about "outlier" years biasing the results
@@ -553,6 +557,35 @@ df6.models %>%
 #' 4. Nearly every segment with a positive intercept has a negative slope. These
 #' are likely cases where population size is decreasing, but ED visits are
 #' rising.
+#'
+#' 5. Very rough estimates of impact of each additional BC resident on ED visits, by CTAS (across all age groups): 
+#' 
+#'     * CTAS 1: no impact
+#' 
+#'     * CTAS 2: 0.01 more visits 
+#' 
+#'     * CTAS 3: 0.02 more visits 
+#'     
+#'     * CTAS 4: 0.005 more visits 
+#'     
+#'     * CTAS 5: no impact
+#'     
+
+
+#+ projections
+#' ## Projections 
+# 7) Projections: --------- 
+
+# todo: fist we have to pull in the projected pop for each pop segmented
+
+# functions for projections: 
+# lm_predict <- function(model){
+#   predict(model, 
+#           newdata = )
+  
+}
+
+
 
 
 #'
