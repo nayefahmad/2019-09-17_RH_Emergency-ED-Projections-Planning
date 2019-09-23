@@ -57,4 +57,4 @@ plot_trend2 <- function(df,
 # First run the following script until definition of `df5.nested`: 
 # "src/2019-09-17_RH_Emergency-ED-Projections-Planning.R"
 
-df5.nested$data[[58]] %>% plot_trend2(subset1 = "<1", subset2 = "1 - Resuscitation")
+# df5.nested$data[[58]] %>% plot_trend2(subset1 = "<1", subset2 = "1 - Resuscitation")
