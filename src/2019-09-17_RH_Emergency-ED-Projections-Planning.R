@@ -608,7 +608,11 @@ df8.add_predictions <-
   df7.add_pop_projection %>%
   mutate(ed_visits_projected_lm = map2(model,
                                        pop_projection,
-                                       lm_predict))
+                                       lm_predict), 
+         
+         ed_visits_projected_rlm = map2(model_rlm,
+                                        pop_projection,
+                                        lm_predict))
 
 
 # df8.add_predictions
@@ -616,13 +620,22 @@ df8.add_predictions <-
 # df with predictions: 
 df9.predictions_unnested <- 
   df8.add_predictions %>% 
-  unnest(ed_visits_projected_lm) %>% 
+  unnest(ed_visits_projected_lm, 
+         ed_visits_projected_rlm) %>% 
   select(age_group_pop, 
          ctas, 
-         fit:upr) %>% 
+         fit:upr, 
+         fit1:upr1) %>% 
+  rename(fit_lm = fit, 
+         lwr_lm = lwr, 
+         upr_lm = upr, 
+         
+         fit_rlm = fit1, 
+         lwr_rlm = lwr1, 
+         upr_rlm = upr1) %>% 
   mutate(year = rep(2019:2036, times = 100))
 
-df9.predictions_unnested 
+# df9.predictions_unnested 
 
 
 # > join historical and projected data: ------
@@ -641,7 +654,11 @@ df10.historical_and_projection <-
           ctas, 
           year)
   
-df10.historical_and_projection
+# view: 
+df10.historical_and_projection %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv")))
 
 
 #'
