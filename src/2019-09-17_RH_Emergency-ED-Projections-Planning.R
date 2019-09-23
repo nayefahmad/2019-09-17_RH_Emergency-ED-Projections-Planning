@@ -210,8 +210,15 @@ df3.pop_nested$age_group_growth[[sample(1:20, 1)]]
 # dev.off()
 
 
+# for use in predictions with regressions, pull out the future populations only:
+df3.pop_nested <- 
+  df3.pop_nested %>% 
+  mutate(pop_projection = map(data, 
+                              function(df){
+                                df %>% filter(df$year > "2018")
+                              }))
 
-
+# df3.pop_nested$pop_projection[[1]]
 
 
 
@@ -576,16 +583,65 @@ df6.models %>%
 #' ## Projections 
 # 7) Projections: --------- 
 
-# todo: fist we have to pull in the projected pop for each pop segmented
+# fist we have to pull in the projected pop for each pop segmented
+df7.add_pop_projection <- 
+  df6.models %>% 
+  left_join(df3.pop_nested %>% 
+              select(age_group_pop, 
+                     pop_projection))
+
+# df7.add_pop_projection$pop_projection[[1]]
+
 
 # functions for projections: 
-# lm_predict <- function(model){
-#   predict(model, 
-#           newdata = )
+lm_predict <- function(model, new_data){
+  df <- new_data
+  
+  predict(model,
+          newdata = df %>% select(pop), 
+          interval = "predict") %>% as.data.frame()
   
 }
 
 
+df8.add_predictions <-
+  df7.add_pop_projection %>%
+  mutate(ed_visits_projected_lm = map2(model,
+                                       pop_projection,
+                                       lm_predict))
+
+
+# df8.add_predictions
+
+# df with predictions: 
+df9.predictions_unnested <- 
+  df8.add_predictions %>% 
+  unnest(ed_visits_projected_lm) %>% 
+  select(age_group_pop, 
+         ctas, 
+         fit:upr) %>% 
+  mutate(year = rep(2019:2036, times = 100))
+
+df9.predictions_unnested 
+
+
+# > join historical and projected data: ------
+df10.historical_and_projection <- 
+  df8.add_predictions %>% 
+  unnest(data) %>% 
+  select(age_group_pop, 
+         ctas, 
+         year, 
+         pop, 
+         ed_visits) %>% 
+  
+  full_join(df9.predictions_unnested) %>% 
+  
+  arrange(age_group_pop, 
+          ctas, 
+          year)
+  
+df10.historical_and_projection
 
 
 #'
