@@ -13,7 +13,7 @@ Nayef: I don't recognize this as an acceptable methodology for long-term project
 use EDMART
 declare @baseyear int,@projectionyear int,@yearcounter int,@mindateid int,@maxdateid int,@facilitylongname varchar(75),@maxgrowthrate float,@bcgrowthrate float
 set @facilitylongname='richmond hospital'
-set @projectionyear=2017
+set @projectionyear=2018
 set @baseyear=2016 --use fiscalyearlong formnat in dim.[date]
 set @yearcounter=@baseyear + 1
 set @mindateid=(select min(dateid) from [ADTCMart].dim.[date] where fiscalyearlong=@baseyear)
