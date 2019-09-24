@@ -13,8 +13,8 @@ Nayef: I don't recognize this as an acceptable methodology for long-term project
 use EDMART
 declare @baseyear int,@projectionyear int,@yearcounter int,@mindateid int,@maxdateid int,@facilitylongname varchar(75),@maxgrowthrate float,@bcgrowthrate float
 set @facilitylongname='richmond hospital'
-set @projectionyear=2036
-set @baseyear=2019 --use fiscalyearlong formnat in dim.[date]
+set @projectionyear=2017
+set @baseyear=2016 --use fiscalyearlong formnat in dim.[date]
 set @yearcounter=@baseyear + 1
 set @mindateid=(select min(dateid) from [ADTCMart].dim.[date] where fiscalyearlong=@baseyear)
 set @maxdateid=(select max(dateid) from [ADTCMart].dim.[date] where fiscalyearlong=@baseyear)
@@ -28,6 +28,8 @@ from DSSI.[dbo].[PEOPLE2018Complete] y
 left outer join DSSI.[dbo].[PEOPLE2018Complete] b on y.agegroup=b.agegroup and y.gender=b.gender and y.lhaid=b.lhaid
 where y.[year]=@projectionyear  
 and b.[year]=@baseyear)
+
+drop table if exists #visits
 
 select case when age = 0 then '<1'
 when age between 1 and 4 then '1-4'
@@ -55,7 +57,7 @@ else 'UNK'end as agegroup
 ,lhaid,1.0*count(*) as visits
 into #visits
 from [dbo].[vwEDVisitIdentifiedRegional]
-left outer join dim.LHA on LocalHealthAuthority = LHAName
+left outer join ADTCMart.dim.LHA on LocalHealthAuthority = LHAName
 where FacilityLongName = @facilitylongname 
 and startdateid between @mindateid and @maxdateid
 --and gendercode<>'u' and lhaid not in (0,203,204,205)
@@ -84,6 +86,8 @@ else 'UNK'end
 ,lhaid
 order by agegroup,gender,lhaid
 
+drop table if exists #growth
+
 select @projectionyear as[year],agegroup,gender,lhaid,1.00000 as growthrate
 into #growth
 from DSSI.[dbo].[PEOPLE2018Complete] 
@@ -96,12 +100,12 @@ update #growth
 set #growth.growthrate=#growth.growthrate * a.adjustedgrowthrate  
 from #growth 
 left outer join 
-(select y.[year] as year2,b.[year] as year1,b.agegroup,b.gender,b.lhaid,y.[Population]/b.[Population] as actualgrowthrate
-,case when y.[Population]/b.[Population] > 1 and y.[Population]/b.[Population] >= @maxgrowthrate + 1 then @maxgrowthrate + 1 
-when y.[Population]/b.[Population] = 1 then 1
-when y.[Population]/b.[Population] < 1 and y.[Population]/b.[Population] < 1-@maxgrowthrate then 1-@maxgrowthrate  -- why? 
+(select y.[year] as year2,b.[year] as year1,b.agegroup,b.gender,b.lhaid,y.[Population]/(b.[Population]+1) as actualgrowthrate
+,case when y.[Population]/(b.[Population]+1) > 1 and y.[Population]/(b.[Population] + 1) >= @maxgrowthrate + 1 then @maxgrowthrate + 1 
+when y.[Population]/(b.[Population]+1) = 1 then 1
+when y.[Population]/(b.[Population]+1) < 1 and y.[Population]/(b.[Population]+1) < 1-@maxgrowthrate then 1-@maxgrowthrate  -- why? 
 --when y.[Population]/b.[Population] < 1 then y.[Population]/b.[Population] 
-else y.[Population]/b.[Population]
+else y.[Population]/(b.[Population]+1)
 end as adjustedgrowthrate 
 from DSSI.[dbo].[PEOPLE2018Complete] y
 left outer join DSSI.[dbo].[PEOPLE2018Complete] b on y.agegroup=b.agegroup and y.gender=b.gender and y.lhaid=b.lhaid
