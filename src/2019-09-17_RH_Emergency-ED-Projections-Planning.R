@@ -213,9 +213,9 @@ df3.pop_nested <-
 df3.pop_nested$age_group_growth[[sample(1:20, 1)]]
 
 # save output: 
-# pdf(here::here("results", 
-#                "dst", 
-#                "2019-09-18_bc_pop-growth-by-age-group.pdf"))
+# pdf(here::here("results",
+#                "dst",
+#                "2019-09-24_bc_pop-growth-by-age-group.pdf"))
 # df3.pop_nested$age_group_growth
 # dev.off()
 
@@ -390,7 +390,7 @@ df5.nested$ed_vs_pop[[sample(1:100, 1)]]
 # save output: 
 # pdf(here::here("results",
 #                "dst",
-#                "2019-09-19_rhs_ed-visits-vs-pop-segmented-by-age-and-ctas.pdf"))
+#                "2019-09-24_rhs_ed-visits-vs-pop-segmented-by-age-and-ctas.pdf"))
 # df5.nested$ed_vs_pop
 # dev.off()
 
@@ -735,7 +735,7 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 # save output: 
 # pdf(here::here("results",
 #                "dst",
-#                "2019-09-23_rhs_projected-ed-visits-by-age-and-ctas-segment.pdf"))
+#                "2019-09-24_rhs_projected-ed-visits-by-age-and-ctas-segment.pdf"))
 # df11.pivoted$plot_projection
 # dev.off()
 
@@ -951,12 +951,56 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 # save output: 
 # pdf(here::here("results",
 #                "dst",
-#                "2019-09-23_rhs_projected-ed-visits-by-age-and-ctas-segment.pdf"))
+#                "2019-09-24_rhs_projected-ed-visits-by-age-and-ctas-segment.pdf"))
 # df11.pivoted$plot_projection
 # dev.off()
 
 
+# with ctas breakdown: 
+df13.1_summary_fcast_by_year <- 
+  df10.historical_and_projection %>% 
+  group_by(year, 
+           ctas) %>% 
+  summarise(fit_lm = sum(fit_lm)) %>% 
+  spread(key = ctas, 
+         value = fit_lm) 
 
+#View: 
+df13.1_summary_fcast_by_year %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(2:6)
+
+
+# without ctas breakdown: 
+df13.2_summary_fcast_by_year <- 
+  df10.historical_and_projection %>% 
+  group_by(year) %>% 
+  summarise(fit_lm = sum(fit_lm))
+
+# view: 
+df13.2_summary_fcast_by_year %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(2:6)
+  
+
+
+# historical numbers: 
+df13.3_summary_historical_by_year <- 
+  df10.historical_and_projection %>% 
+  group_by(year) %>% 
+  summarise(ed_visits = sum(ed_visits)) 
+  
+
+# view: 
+df13.3_summary_historical_by_year %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(2:6)
 
 
 #'
@@ -967,7 +1011,7 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 # write_csv(df10.historical_and_projection,
 #           here::here("results",
 #                      "dst",
-#                      "2019-09-22_rhs_ed-visits-projections-by-age-and-ctas.csv"))
+#                      "2019-09-24_rhs_ed-visits-projections-by-age-and-ctas.csv"))
 
 
  
