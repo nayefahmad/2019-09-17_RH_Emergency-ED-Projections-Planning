@@ -956,6 +956,9 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 # dev.off()
 
 
+#' ## Summaries
+# > Summaries ----
+
 # with ctas breakdown: 
 df13.1_summary_fcast_by_year <- 
   df10.historical_and_projection %>% 
@@ -1007,11 +1010,54 @@ df13.3_summary_historical_by_year %>%
 #' # Appendix 
 # Appendix -----------
 
-# todo:write outputs: 
 # write_csv(df10.historical_and_projection,
 #           here::here("results",
 #                      "dst",
 #                      "2019-09-24_rhs_ed-visits-projections-by-age-and-ctas.csv"))
 
 
+#' ## Checks
+#'
+#' 1. After all processing, does 2017 and 2018 total ED visits match to within
+#' 50 visits what it should be? I'll allow for a difference of up to 50 because we exclude unknown age and
+#' CTAS other than 1-5.
+#' 
+
+site <- "RHS"
+
+df14.1.actuals <- 
+  ed_mart %>% 
+  filter(FacilityShortName == site, 
+         StartDate >= "2017-01-01", 
+         StartDate <= "2018-12-31") %>% 
+  select(StartDate, 
+         TriageAcuityDescription, 
+         Age, 
+         PatientID) %>% 
+  collect() %>% 
+  
+  mutate(year = lubridate::year(StartDate)) %>% 
+  
+  group_by(year) %>% 
+  summarize(ed_visits = n())
+  
+         
+df14.2.processed <- 
+  df10.historical_and_projection %>% 
+  filter(year %in% c("2017", "2018")) %>% 
+  group_by(year) %>% 
+  summarise(ed_visits = sum(ed_visits))
+
+#' Ans: `r abs(df14.1.actuals$ed_visits - df14.2.processed$ed_visits) < 50`
+
+#' 
+#' 2. Do we have the right number of rows in the nested data set `df5.nested`?
+#'
+#' Ans: `r nrow(df5.nested) == 100`
+#'
+#'
+#' 3. Do we have the right number of rows in the final dataset? Age groups \*
+#' CTAS \* years. Years are from 2010 to 2036.
+#' 
+#' Ans: `r 20*5*(2036-2010+1) == nrow(expand(df10.historical_and_projection, age_group_pop, ctas, year) %>% left_join(df10.historical_and_projection))`
  
