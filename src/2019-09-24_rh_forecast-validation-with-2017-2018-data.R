@@ -957,6 +957,56 @@ df11.pivoted$plot_projection[[sample(1:100, 1)]]
 
 
 
+# with ctas breakdown: 
+df13.1_summary_fcast_by_year <- 
+  df10.historical_and_projection %>% 
+  group_by(year, 
+           ctas) %>% 
+  summarise(fit_lm = sum(fit_lm)) %>% 
+  spread(key = ctas, 
+         value = fit_lm) 
+
+#View: 
+df13.1_summary_fcast_by_year %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(2:6)
+
+
+# without ctas breakdown: 
+df13.2_summary_fcast_by_year <- 
+  df10.historical_and_projection %>% 
+  group_by(year) %>% 
+  summarise(fit_lm = sum(fit_lm))
+
+# view: 
+df13.2_summary_fcast_by_year %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(2:6)
+
+
+
+# historical numbers: 
+df13.3_summary_historical_by_year <- 
+  df10.historical_and_projection %>% 
+  group_by(year) %>% 
+  summarise(ed_visits = sum(ed_visits)) 
+
+
+# view: 
+df13.3_summary_historical_by_year %>% 
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip', 
+                           buttons = c('excel', "csv"))) %>% 
+  formatRound(2:6)
+
+
+
+
+
 
 
 #'
