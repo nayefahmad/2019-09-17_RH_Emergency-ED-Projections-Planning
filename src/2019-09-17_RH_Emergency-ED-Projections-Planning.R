@@ -90,9 +90,13 @@ df1.ed_visits_annual <-
 #' Note that we remove cases where `Age` = NA (25 rows), and where `age_group` =
 #' "Invalid" (255 rows)
 #' 
-#' We also remove `ctas` levels other than 1 to 5. 
+#' We also remove `ctas` levels other than 1 to 5.
+#' 
+#'  Here's a random sample of 100 rows from the result:  
 
 df1.ed_visits_annual %>% 
+  sample_n(100) %>% 
+  arrange(year, ctas, Age) %>% 
   datatable(extensions = 'Buttons',
             options = list(dom = 'Bfrtip', 
                            buttons = c('excel', "csv")))
